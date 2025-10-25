@@ -1,0 +1,1017 @@
+[
+    {
+        "id": "2367d6640af90604",
+        "type": "json",
+        "z": "596cd593ea0db1f5",
+        "name": "Parse JSON",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 290,
+        "y": 160,
+        "wires": [
+            [
+                "1bc11c4b5d81bc10"
+            ]
+        ]
+    },
+    {
+        "id": "1bc11c4b5d81bc10",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Xử lý phòng 1",
+        "func": "// Cập nhật giao diện + CSV + bật/tắt nút DUYỆT\nconst data = msg.payload;\nlet text, color;\nlet state = \"\";\n\nif (data.status === 'waiting') {\n    text = 'Có yêu cầu từ phòng bệnh số 1';\n    color = 2;\n    state = 'waiting';\n} else if (data.status === 'approved') {\n    text = 'Đang xử lý...';\n    color = 1;\n    state = 'approved';\n} else if (data.status === 'done') {\n    text = 'Xử lý xong';\n    color = 0;\n    state = 'done';\n}\n\nlet roomStates = flow.get('room_state') || {};\nroomStates[data.id] = state;\nflow.set('room_state', roomStates);\n\nlet enableBtn = (state === 'waiting');\n\nreturn [{ payload: color }, { lbl: text }, { enable: enableBtn }, { payload: data }];",
+        "outputs": 4,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 160,
+        "wires": [
+            [
+                "36a02685572df212"
+            ],
+            [
+                "733c2072dfb4937d"
+            ],
+            [
+                "cecbd9125a61656d"
+            ],
+            [
+                "993a4631fb402810"
+            ]
+        ]
+    },
+    {
+        "id": "20caad30402e0a29",
+        "type": "mqtt in",
+        "z": "596cd593ea0db1f5",
+        "name": "MQTT In room1",
+        "topic": "room1",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 120,
+        "y": 160,
+        "wires": [
+            [
+                "2367d6640af90604"
+            ]
+        ]
+    },
+    {
+        "id": "36a02685572df212",
+        "type": "ui_led",
+        "z": "596cd593ea0db1f5",
+        "order": 1,
+        "group": "ui_group_room1",
+        "width": 2,
+        "height": 1,
+        "label": "",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#ffffff",
+                "value": "0",
+                "valueType": "num"
+            },
+            {
+                "color": "#ffff00",
+                "value": "1",
+                "valueType": "num"
+            },
+            {
+                "color": "#ff0000",
+                "value": "2",
+                "valueType": "num"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "circle",
+        "showGlow": true,
+        "name": "LED 1",
+        "x": 710,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "733c2072dfb4937d",
+        "type": "ui_text",
+        "z": "596cd593ea0db1f5",
+        "group": "ui_group_room1",
+        "order": 2,
+        "width": 8,
+        "height": 1,
+        "name": "Hiển thị",
+        "label": "",
+        "format": "{{msg.lbl}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 720,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "cecbd9125a61656d",
+        "type": "ui_template",
+        "z": "596cd593ea0db1f5",
+        "group": "ui_group_room1",
+        "name": "Nút \"Duyệt\"",
+        "order": 3,
+        "width": 10,
+        "height": 1,
+        "format": "<div style=\"text-align:center\">\n  <md-button class=\"md-raised md-primary\" ng-disabled=\"!enabled\" ng-click=\"send({payload:'approve'})\">\n    DUYỆT\n  </md-button>\n</div>\n<script>\n(function(scope){\n  scope.enabled = false;\n  scope.$watch('msg', function(msg){\n    if(!msg) return;\n    if(msg.enable === true){ scope.enabled = true; }\n    if(msg.enable === false){ scope.enabled = false; }\n  });\n})(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": false,
+        "templateScope": "local",
+        "className": "",
+        "x": 730,
+        "y": 180,
+        "wires": [
+            [
+                "6dee5f28e000ac73"
+            ]
+        ]
+    },
+    {
+        "id": "6dee5f28e000ac73",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Chặn nếu chưa waiting",
+        "func": "// Chỉ cho DUYỆT khi phòng đang ở trạng thái waiting\nconst room = 'room1';\nconst rs = flow.get('room_state') || {};\nconst ok = (rs[room] === 'waiting');\n\nif (ok) {\n  msg.payload = { id: room, status: 'approved' };\n  return [msg, null];\n} else {\n  return [null, { payload: 'Chưa có yêu cầu hoặc đã duyệt!', position: 'top right', timeout: 3 }];\n}",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 240,
+        "wires": [
+            [
+                "6c577eea1e418cb2",
+                "6abcb2857a5213da",
+                "993a4631fb402810"
+            ],
+            [
+                "f4852c97fb97e70d"
+            ]
+        ]
+    },
+    {
+        "id": "6c577eea1e418cb2",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Tắt nút sau khi \"Duyệt\"",
+        "func": "return { enable: false };",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1050,
+        "y": 220,
+        "wires": [
+            [
+                "cecbd9125a61656d"
+            ]
+        ]
+    },
+    {
+        "id": "6abcb2857a5213da",
+        "type": "mqtt out",
+        "z": "596cd593ea0db1f5",
+        "name": "MQTT Out room1",
+        "topic": "room1",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "mqtt_broker_local",
+        "x": 1030,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "f4852c97fb97e70d",
+        "type": "debug",
+        "z": "596cd593ea0db1f5",
+        "name": "Báo lỗi",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 990,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "29548acb1fdad937",
+        "type": "ui_led",
+        "z": "596cd593ea0db1f5",
+        "order": 1,
+        "group": "30158daefe4e89e8",
+        "width": 2,
+        "height": 1,
+        "label": "",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#ffffff",
+                "value": "0",
+                "valueType": "num"
+            },
+            {
+                "color": "#ffff00",
+                "value": "1",
+                "valueType": "num"
+            },
+            {
+                "color": "#ff0000",
+                "value": "2",
+                "valueType": "num"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "circle",
+        "showGlow": true,
+        "name": "LED 2",
+        "x": 710,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "f34cbae8fee82169",
+        "type": "ui_text",
+        "z": "596cd593ea0db1f5",
+        "group": "30158daefe4e89e8",
+        "order": 2,
+        "width": 8,
+        "height": 1,
+        "name": "Hiển thị",
+        "label": "",
+        "format": "{{msg.lbl}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 720,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "7a53579d857e1813",
+        "type": "ui_template",
+        "z": "596cd593ea0db1f5",
+        "group": "30158daefe4e89e8",
+        "name": "Nút \"Duyệt\"",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "format": "<div style=\"text-align:center\">\n  <md-button class=\"md-raised md-primary\" ng-disabled=\"!enabled\" ng-click=\"send({payload:'approve'})\">\n    DUYỆT\n  </md-button>\n</div>\n<script>\n(function(scope){\n  scope.enabled = false;\n  scope.$watch('msg', function(msg){\n    if(!msg) return;\n    if(msg.enable === true){ scope.enabled = true; }\n    if(msg.enable === false){ scope.enabled = false; }\n  });\n})(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": false,
+        "templateScope": "local",
+        "className": "",
+        "x": 730,
+        "y": 400,
+        "wires": [
+            [
+                "15da56e9fadbb5f0"
+            ]
+        ]
+    },
+    {
+        "id": "15aef2715c49decb",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Xử lý phòng 2",
+        "func": "// Cập nhật giao diện + CSV + bật/tắt nút DUYỆT\nconst data = msg.payload;\nlet text, color;\nlet state = \"\";\n\nif (data.status === 'waiting') {\n    text = 'Có yêu cầu từ phòng bệnh số 2';\n    color = 2;\n    state = 'waiting';\n} else if (data.status === 'approved') {\n    text = 'Đang xử lý...';\n    color = 1;\n    state = 'approved';\n} else if (data.status === 'done') {\n    text = 'Xử lý xong';\n    color = 0;\n    state = 'done';\n}\n\nlet roomStates = flow.get('room_state') || {};\nroomStates[data.id] = state;\nflow.set('room_state', roomStates);\n\nlet enableBtn = (state === 'waiting');\n\nreturn [{ payload: color }, { lbl: text }, { enable: enableBtn }, { payload: data }];",
+        "outputs": 4,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 380,
+        "wires": [
+            [
+                "29548acb1fdad937"
+            ],
+            [
+                "f34cbae8fee82169"
+            ],
+            [
+                "7a53579d857e1813"
+            ],
+            [
+                "993a4631fb402810"
+            ]
+        ]
+    },
+    {
+        "id": "669170d448c25f12",
+        "type": "json",
+        "z": "596cd593ea0db1f5",
+        "name": "Parse JSON",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 290,
+        "y": 380,
+        "wires": [
+            [
+                "15aef2715c49decb"
+            ]
+        ]
+    },
+    {
+        "id": "3c11c92e13bc098c",
+        "type": "mqtt in",
+        "z": "596cd593ea0db1f5",
+        "name": "MQTT In room2",
+        "topic": "room2",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 120,
+        "y": 380,
+        "wires": [
+            [
+                "669170d448c25f12"
+            ]
+        ]
+    },
+    {
+        "id": "15da56e9fadbb5f0",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Chặn nếu chưa waiting",
+        "func": "// Chỉ cho DUYỆT khi phòng đang ở trạng thái waiting\nconst room = 'room2';\nconst rs = flow.get('room_state') || {};\nconst ok = (rs[room] === 'waiting');\n\nif (ok) {\n  msg.payload = { id: room, status: 'approved' };\n  return [msg, null];\n} else {\n  return [null, { payload: 'Chưa có yêu cầu hoặc đã duyệt!', position: 'top right', timeout: 3 }];\n}",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 460,
+        "wires": [
+            [
+                "79bc3f25d450adcf",
+                "cf1e95de3fa3bd79",
+                "993a4631fb402810"
+            ],
+            [
+                "48d1789c1745e057"
+            ]
+        ]
+    },
+    {
+        "id": "48d1789c1745e057",
+        "type": "debug",
+        "z": "596cd593ea0db1f5",
+        "name": "Báo lỗi",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 990,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "cf1e95de3fa3bd79",
+        "type": "mqtt out",
+        "z": "596cd593ea0db1f5",
+        "name": "MQTT Out room2",
+        "topic": "room2",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "mqtt_broker_local",
+        "x": 1030,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "79bc3f25d450adcf",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Tắt nút sau khi \"Duyệt\"",
+        "func": "return { enable: false };",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1050,
+        "y": 440,
+        "wires": [
+            [
+                "7a53579d857e1813"
+            ]
+        ]
+    },
+    {
+        "id": "2a52cf0ed8c1d87f",
+        "type": "ui_led",
+        "z": "596cd593ea0db1f5",
+        "order": 1,
+        "group": "b9f02a503fe70b9c",
+        "width": 2,
+        "height": 1,
+        "label": "",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#ffffff",
+                "value": "0",
+                "valueType": "num"
+            },
+            {
+                "color": "#ffff00",
+                "value": "1",
+                "valueType": "num"
+            },
+            {
+                "color": "#ff0000",
+                "value": "2",
+                "valueType": "num"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "circle",
+        "showGlow": true,
+        "name": "LED 3",
+        "x": 710,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "1e8391eb250a8404",
+        "type": "ui_text",
+        "z": "596cd593ea0db1f5",
+        "group": "b9f02a503fe70b9c",
+        "order": 2,
+        "width": 8,
+        "height": 1,
+        "name": "Hiển thị",
+        "label": "",
+        "format": "{{msg.lbl}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 720,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "7e19ee2e27a73587",
+        "type": "ui_template",
+        "z": "596cd593ea0db1f5",
+        "group": "b9f02a503fe70b9c",
+        "name": "Nút \"Duyệt\"",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "format": "<div style=\"text-align:center\">\n  <md-button class=\"md-raised md-primary\" ng-disabled=\"!enabled\" ng-click=\"send({payload:'approve'})\">\n    DUYỆT\n  </md-button>\n</div>\n<script>\n(function(scope){\n  scope.enabled = false;\n  scope.$watch('msg', function(msg){\n    if(!msg) return;\n    if(msg.enable === true){ scope.enabled = true; }\n    if(msg.enable === false){ scope.enabled = false; }\n  });\n})(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": false,
+        "templateScope": "local",
+        "className": "",
+        "x": 730,
+        "y": 620,
+        "wires": [
+            [
+                "99bda992e172525e"
+            ]
+        ]
+    },
+    {
+        "id": "358d7424594242f7",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Xử lý phòng 3",
+        "func": "// Cập nhật giao diện + CSV + bật/tắt nút DUYỆT\nconst data = msg.payload;\nlet text, color;\nlet state = \"\";\n\nif (data.status === 'waiting') {\n    text = 'Có yêu cầu từ phòng bệnh số 3';\n    color = 2;\n    state = 'waiting';\n} else if (data.status === 'approved') {\n    text = 'Đang xử lý...';\n    color = 1;\n    state = 'approved';\n} else if (data.status === 'done') {\n    text = 'Xử lý xong';\n    color = 0;\n    state = 'done';\n}\n\nlet roomStates = flow.get('room_state') || {};\nroomStates[data.id] = state;\nflow.set('room_state', roomStates);\n\nlet enableBtn = (state === 'waiting');\n\nreturn [{ payload: color }, { lbl: text }, { enable: enableBtn }, { payload: data }];",
+        "outputs": 4,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 600,
+        "wires": [
+            [
+                "2a52cf0ed8c1d87f"
+            ],
+            [
+                "1e8391eb250a8404"
+            ],
+            [
+                "7e19ee2e27a73587"
+            ],
+            [
+                "993a4631fb402810"
+            ]
+        ]
+    },
+    {
+        "id": "718e4f7277e5416b",
+        "type": "json",
+        "z": "596cd593ea0db1f5",
+        "name": "Parse JSON",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 290,
+        "y": 600,
+        "wires": [
+            [
+                "358d7424594242f7"
+            ]
+        ]
+    },
+    {
+        "id": "4c47307283d09158",
+        "type": "mqtt in",
+        "z": "596cd593ea0db1f5",
+        "name": "MQTT In room3",
+        "topic": "room3",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 120,
+        "y": 600,
+        "wires": [
+            [
+                "718e4f7277e5416b"
+            ]
+        ]
+    },
+    {
+        "id": "99bda992e172525e",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Chặn nếu chưa waiting",
+        "func": "// Chỉ cho DUYỆT khi phòng đang ở trạng thái waiting\nconst room = 'room3';\nconst rs = flow.get('room_state') || {};\nconst ok = (rs[room] === 'waiting');\n\nif (ok) {\n  msg.payload = { id: room, status: 'approved' };\n  return [msg, null];\n} else {\n  return [null, { payload: 'Chưa có yêu cầu hoặc đã duyệt!', position: 'top right', timeout: 3 }];\n}",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 680,
+        "wires": [
+            [
+                "8672ded580cb1bb5",
+                "b934255b7414e886",
+                "993a4631fb402810"
+            ],
+            [
+                "5b5d83f9f418051e"
+            ]
+        ]
+    },
+    {
+        "id": "5b5d83f9f418051e",
+        "type": "debug",
+        "z": "596cd593ea0db1f5",
+        "name": "Báo lỗi",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 990,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "b934255b7414e886",
+        "type": "mqtt out",
+        "z": "596cd593ea0db1f5",
+        "name": "MQTT Out room3",
+        "topic": "room3",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "mqtt_broker_local",
+        "x": 1030,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "8672ded580cb1bb5",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Tắt nút sau khi \"Duyệt\"",
+        "func": "return { enable: false };",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1050,
+        "y": 660,
+        "wires": [
+            [
+                "7e19ee2e27a73587"
+            ]
+        ]
+    },
+    {
+        "id": "db793569a59bfa82",
+        "type": "ui_text",
+        "z": "596cd593ea0db1f5",
+        "group": "63cb13af07b44014",
+        "order": 2,
+        "width": 8,
+        "height": 1,
+        "name": "Hiển thị",
+        "label": "",
+        "format": "{{msg.lbl}}",
+        "layout": "row-spread",
+        "className": "",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 720,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "aceeca8a0727a90b",
+        "type": "ui_template",
+        "z": "596cd593ea0db1f5",
+        "group": "63cb13af07b44014",
+        "name": "Nút \"Duyệt\"",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "format": "<div style=\"text-align:center\">\n  <md-button class=\"md-raised md-primary\" ng-disabled=\"!enabled\" ng-click=\"send({payload:'approve'})\">\n    DUYỆT\n  </md-button>\n</div>\n<script>\n(function(scope){\n  scope.enabled = false;\n  scope.$watch('msg', function(msg){\n    if(!msg) return;\n    if(msg.enable === true){ scope.enabled = true; }\n    if(msg.enable === false){ scope.enabled = false; }\n  });\n})(scope);\n</script>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": false,
+        "templateScope": "local",
+        "className": "",
+        "x": 730,
+        "y": 840,
+        "wires": [
+            [
+                "413c82003d25c39b"
+            ]
+        ]
+    },
+    {
+        "id": "a59765ffb18c938d",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Xử lý phòng 4",
+        "func": "// Cập nhật giao diện + CSV + bật/tắt nút DUYỆT\nconst data = msg.payload;\nlet text, color;\nlet state = \"\";\n\nif (data.status === 'waiting') {\n    text = 'Có yêu cầu từ phòng bệnh số 4';\n    color = 2;\n    state = 'waiting';\n} else if (data.status === 'approved') {\n    text = 'Đang xử lý...';\n    color = 1;\n    state = 'approved';\n} else if (data.status === 'done') {\n    text = 'Xử lý xong';\n    color = 0;\n    state = 'done';\n}\n\nlet roomStates = flow.get('room_state') || {};\nroomStates[data.id] = state;\nflow.set('room_state', roomStates);\n\nlet enableBtn = (state === 'waiting');\n\nreturn [{ payload: color }, { lbl: text }, { enable: enableBtn }, { payload: data }];",
+        "outputs": 4,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 820,
+        "wires": [
+            [
+                "ce01044b5872d5bc"
+            ],
+            [
+                "db793569a59bfa82"
+            ],
+            [
+                "aceeca8a0727a90b"
+            ],
+            [
+                "993a4631fb402810"
+            ]
+        ]
+    },
+    {
+        "id": "61df2f1b7ab30d6e",
+        "type": "json",
+        "z": "596cd593ea0db1f5",
+        "name": "Parse JSON",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 290,
+        "y": 820,
+        "wires": [
+            [
+                "a59765ffb18c938d"
+            ]
+        ]
+    },
+    {
+        "id": "b2887e54e428a1b4",
+        "type": "mqtt in",
+        "z": "596cd593ea0db1f5",
+        "name": "MQTT In room4",
+        "topic": "room4",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "mqtt_broker_local",
+        "nl": false,
+        "rap": false,
+        "inputs": 0,
+        "x": 120,
+        "y": 820,
+        "wires": [
+            [
+                "61df2f1b7ab30d6e"
+            ]
+        ]
+    },
+    {
+        "id": "413c82003d25c39b",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Chặn nếu chưa waiting",
+        "func": "// Chỉ cho DUYỆT khi phòng đang ở trạng thái waiting\nconst room = 'room4';\nconst rs = flow.get('room_state') || {};\nconst ok = (rs[room] === 'waiting');\n\nif (ok) {\n  msg.payload = { id: room, status: 'approved' };\n  return [msg, null];\n} else {\n  return [null, { payload: 'Chưa có yêu cầu hoặc đã duyệt!', position: 'top right', timeout: 3 }];\n}",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 900,
+        "wires": [
+            [
+                "d08828511cec51f3",
+                "1e5e3d531473ac6f",
+                "993a4631fb402810"
+            ],
+            [
+                "b3e0bb86cdf8c24c"
+            ]
+        ]
+    },
+    {
+        "id": "b3e0bb86cdf8c24c",
+        "type": "debug",
+        "z": "596cd593ea0db1f5",
+        "name": "Báo lỗi",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 990,
+        "y": 920,
+        "wires": []
+    },
+    {
+        "id": "1e5e3d531473ac6f",
+        "type": "mqtt out",
+        "z": "596cd593ea0db1f5",
+        "name": "MQTT Out room4",
+        "topic": "room4",
+        "qos": "2",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "mqtt_broker_local",
+        "x": 1030,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "d08828511cec51f3",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Tắt nút sau khi \"Duyệt\"",
+        "func": "return { enable: false };",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1050,
+        "y": 880,
+        "wires": [
+            [
+                "aceeca8a0727a90b"
+            ]
+        ]
+    },
+    {
+        "id": "ce01044b5872d5bc",
+        "type": "ui_led",
+        "z": "596cd593ea0db1f5",
+        "order": 1,
+        "group": "63cb13af07b44014",
+        "width": 2,
+        "height": 1,
+        "label": "",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#ffffff",
+                "value": "0",
+                "valueType": "num"
+            },
+            {
+                "color": "#ffff00",
+                "value": "1",
+                "valueType": "num"
+            },
+            {
+                "color": "#ff0000",
+                "value": "2",
+                "valueType": "num"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "circle",
+        "showGlow": true,
+        "name": "LED 4",
+        "x": 710,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "d67d1baaa44e97dc",
+        "type": "buffer-xlsx",
+        "z": "596cd593ea0db1f5",
+        "name": "",
+        "stylemerge": false,
+        "x": 1450,
+        "y": 540,
+        "wires": [
+            [
+                "54d2ab1e96768127"
+            ]
+        ]
+    },
+    {
+        "id": "54d2ab1e96768127",
+        "type": "file",
+        "z": "596cd593ea0db1f5",
+        "name": "",
+        "filename": "/Volumes/Data/1.PROJECT/MyProject/Teach/NodeRed/room_log.xlsx",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": true,
+        "overwriteFile": "true",
+        "encoding": "setbymsg",
+        "x": 1810,
+        "y": 540,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "993a4631fb402810",
+        "type": "function",
+        "z": "596cd593ea0db1f5",
+        "name": "Lưu file",
+        "func": "\n// === Function: Build 4-room workbook (GMT+7) for @juraj336/node-red-buffer-xlsx ===\n// - Hỗ trợ 4 phòng: room1..room4\n// - Lưu state theo phòng: waiting → approved → done\n// - Khi 'done' => thêm 1 dòng vào sheet của phòng đó, xuất 1 workbook có 4 sheet\n// - Nên nối sang node `buffer-xlsx writeFile`\n//\n// Danh sách phòng\nconst ROOM_IDS = [\"room1\", \"room2\", \"room3\", \"room4\"];\n\n// === Helpers ===\nfunction nowVN() {\n    const local = new Date().toLocaleString(\"en-GB\", {\n        timeZone: \"Asia/Bangkok\",\n        hour12: false\n    });\n    const [date, time] = local.split(\", \");\n    const [dd, mm, yyyy] = date.split(\"/\");\n    return `${yyyy}-${mm}-${dd} ${time}`; // YYYY-MM-DD HH:MM:SS\n}\n\nfunction headerRow() {\n    return {\n        row_styling: {\n            pattern_type: \"solid\",\n            fgColor: \"ffffffff\",\n            bgColor: \"FFe4e2de\",\n            hAlign: \"center\",\n            vAlign: \"center\"\n        },\n        cells: [\n            { cell_value: \"Nhận yêu cầu\", cell_styling: { fBold: true } },\n            { cell_value: \"Phòng\", cell_styling: { fBold: true } },\n            { cell_value: \"Chấp nhận\", cell_styling: { fBold: true } },\n            { cell_value: \"Xử lý xong\", cell_styling: { fBold: true } }\n        ]\n    };\n}\n\nfunction sheetWrapper(sheet_name, dataRows) {\n    return {\n        sheet_name,\n        sheet_styling: {\n            pattern_type: \"solid\",\n            fgColor: \"ffffffff\",\n            bgColor: \"FFFEFEFE\",\n            hAlign: \"left\",\n            vAlign: \"center\",\n            borders: { all: { style: \"thin\", bColor: \"FF9b9bd9\" } }\n        },\n        header_styling: {\n            pattern_type: \"solid\",\n            fgColor: \"ffffffff\",\n            bgColor: \"FFe4e2de\",\n            hAlign: \"center\",\n            vAlign: \"center\",\n            fBold: true\n        },\n        columns_styling: [\n            { index: 0, column_styling: { hAlign: \"center\" } },\n            { index: 1, column_styling: { hAlign: \"left\", fBold: true } },\n            { index: 2, column_styling: { hAlign: \"center\" } },\n            { index: 3, column_styling: { hAlign: \"center\" } }\n        ],\n        rows: [headerRow(), ...dataRows]\n    };\n}\n\n// === Input ===\nconst d = msg.payload || {};\nconst room = (d.id || \"\").toString().toLowerCase();\nconst status = (d.status || \"\").toString().toLowerCase();\nconst now = nowVN();\n\n// Chỉ xử lý 4 phòng\nif (!ROOM_IDS.includes(room)) {\n    // Bỏ qua nếu phòng không nằm trong 4 phòng đã định\n    return null;\n}\n\n// === State theo phòng (waiting/approved → lưu; done → ghi hàng)\nlet state = flow.get(\"xlsx_state\") || {};\nstate[room] = state[room] || { reqTs: \"\", apprTs: \"\", doneTs: \"\" };\n\nif (status === \"waiting\") {\n    state[room].reqTs = now;\n    flow.set(\"xlsx_state\", state);\n    return null;\n}\n\nif (status === \"approved\") {\n    state[room].apprTs = now;\n    flow.set(\"xlsx_state\", state);\n    return null;\n}\n\nif (status !== \"done\") {\n    return null;\n}\n\n// == done ==\nstate[room].doneTs = now;\n\n// === Lưu hàng vào bộ đệm từng phòng ===\n// rowsMap: { room1: [...], room2: [...], ... }\nlet rowsMap = flow.get(\"xlsx_rows_map\") || {};\nROOM_IDS.forEach(r => { rowsMap[r] = rowsMap[r] || []; });\n\n// Tạo 1 dòng cho phòng hiện tại\nconst newRow = {\n    req: state[room].reqTs || \"\",\n    room: room,\n    appr: state[room].apprTs || \"\",\n    done: state[room].doneTs || \"\"\n};\n\n// Chuyển newRow -> cells\nfunction rowToCells(r) {\n    return {\n        row_styling: {\n            pattern_type: \"solid\",\n            fgColor: \"ffffffff\",\n            bgColor: \"ffffffff\",\n            hAlign: \"center\",\n            vAlign: \"center\"\n        },\n        cells: [\n            { cell_value: r.req },\n            { cell_value: r.room },\n            { cell_value: r.appr },\n            { cell_value: r.done }\n        ]\n    };\n}\n\nrowsMap[room].push(rowToCells(newRow));\n\n// Reset state phòng để sẵn sàng vòng mới\nstate[room] = { reqTs: \"\", apprTs: \"\", doneTs: \"\" };\nflow.set(\"xlsx_state\", state);\nflow.set(\"xlsx_rows_map\", rowsMap);\n\n// === Build toàn workbook (4 sheet) từ rowsMap ===\nlet workbookSheets = [];\nROOM_IDS.forEach(r => {\n    const dataRows = rowsMap[r]; // mảng các dòng cells của phòng r\n    // Luôn tạo sheet kể cả trống (tuỳ bạn: nếu muốn chỉ tạo khi có dữ liệu thì if (dataRows.length) mới push)\n    workbookSheets.push(sheetWrapper(r, dataRows));\n});\n\n// Xuất cho buffer-xlsx writeFile\nmsg.payload = workbookSheets;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1280,
+        "y": 540,
+        "wires": [
+            [
+                "d67d1baaa44e97dc"
+            ]
+        ]
+    },
+    {
+        "id": "mqtt_broker_local",
+        "type": "mqtt-broker",
+        "name": "Local MQTT",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthQos": "0",
+        "willQos": "0"
+    },
+    {
+        "id": "ui_group_room1",
+        "type": "ui_group",
+        "name": "Phòng 1",
+        "tab": "ui_tab_home",
+        "order": 1,
+        "width": 10
+    },
+    {
+        "id": "30158daefe4e89e8",
+        "type": "ui_group",
+        "name": "Phòng 2",
+        "tab": "ui_tab_home",
+        "order": 2,
+        "disp": true,
+        "width": 10,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "b9f02a503fe70b9c",
+        "type": "ui_group",
+        "name": "Phòng 3",
+        "tab": "ui_tab_home",
+        "order": 3,
+        "disp": true,
+        "width": 10,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "63cb13af07b44014",
+        "type": "ui_group",
+        "name": "Phòng 4",
+        "tab": "ui_tab_home",
+        "order": 4,
+        "disp": true,
+        "width": 10,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "ui_tab_home",
+        "type": "ui_tab",
+        "name": "Home",
+        "icon": "dashboard",
+        "order": 1
+    }
+]
